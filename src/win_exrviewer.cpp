@@ -9,10 +9,44 @@
 
 #define EXR_MAGIC 0x01312f76 // Little-endian for 76 2f 31 01
 
+#define SAVE_PATH "save.bmp"
+
 global u32 g_Running;
 global HWND g_Window;
-global u32 g_Texture;
 global vec2 g_WindowSize;
+
+global image g_Image;
+global u32 g_Texture;
+
+internal void
+SaveBMP(image* Image, char* FilePath)
+{
+    FILE* File = fopen(FilePath, "wb");
+    if(!File)
+    {
+        printf("Error creating file %s\n", FilePath);
+        return;
+    }
+    
+    bmp_file BmpHeader = {0};
+    u32 DataSize = Image->Width * Image->Height * Image->Channels;
+    u32 FileSize = offsetof(BmpHeader, Data) + DataSize;
+    
+    BmpHeader.ID[0]        = 'B';
+    BmpHeader.ID[1]        = 'M';
+    BmpHeader.FileSize     = FileSize;
+    BmpHeader.DataOffset   = offsetof(BmpHeader, Data);
+    BmpHeader.HeaderSize   = offsetof(BmpHeader, Data) - offsetof(BmpHeader, HeaderSize);
+    BmpHeader.Width        = Image->Width;
+    BmpHeader.Height       = -Image->Height;
+    BmpHeader.Planes       = 1;
+    BmpHeader.BitsPerPixel = Image->Channels * 8;
+    BmpHeader.DataSize     = DataSize;
+    
+    fwrite(&BmpHeader, 1, offsetof(BmpHeader, Data), File);
+    fwrite(Image->Data, 1, BmpHeader.DataSize, File);
+    fclose(File);
+}
 
 internal u32
 CreateTexture(image Image)
@@ -27,7 +61,7 @@ CreateTexture(image Image)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, Image.Width, Image.Height, 0, GL_RGB, GL_UNSIGNED_BYTE, Image.Data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, Image.Width, Image.Height, 0, GL_BGR_EXT, GL_UNSIGNED_BYTE, Image.Data);
     
     return Result;
 }
@@ -122,11 +156,12 @@ BMPColorFromColorF32(f32 R, f32 G, f32 B, f32 Exposure)
     bmp_color Result;
     
     // Exposure
-    R *= powf(2.0f, Exposure);
-    G *= powf(2.0f, Exposure);
-    B *= powf(2.0f, Exposure);
+    f32 Scale = powf(2.0f, Exposure);
+    R *= Scale;
+    G *= Scale;
+    B *= Scale;
     
-    // Tonemap
+    // Tonemap (simple Reindhart)
     R = (R / (R + 1.0f));
     G = (G / (G + 1.0f));
     B = (B / (B + 1.0f));
@@ -140,6 +175,7 @@ BMPColorFromColorF32(f32 R, f32 G, f32 B, f32 Exposure)
     Result.b = (u8)(B * 255.0f);
     return Result;
 }
+
 internal f32
 FloatFromHalf(u16 HalfVal)
 {
@@ -295,7 +331,7 @@ ParseEXR(char* FilePath)
         
         for(u32 j = 0; j < Width; j++)
         {
-            *CurrentImageBuffer = BMPColorFromColorF32(FloatFromHalf(R[j]), FloatFromHalf(G[j]), FloatFromHalf(B[j]), 4.0f);
+            *CurrentImageBuffer = BMPColorFromColorF32(FloatFromHalf(R[j]), FloatFromHalf(G[j]), FloatFromHalf(B[j]), 1.0f);
             CurrentImageBuffer++;
         }
     }
@@ -330,6 +366,14 @@ WndProc(HWND Window, UINT Message, WPARAM wParam, LPARAM lParam)
                     DestroyWindow(Window);
                     break;
                 }
+                case VK_SPACE:
+                {
+                    if(g_Image.Width > 0)
+                    {
+                        SaveBMP(&g_Image, "../data/save.bmp");
+                    }
+                    break;
+                }
             }
             break;
         }
@@ -360,7 +404,7 @@ int main(int NumArgs, char** Args)
     char* FilePath = Args[1];
     printf("EXR file to view: %s\n", FilePath);
     
-    image Image = ParseEXR(FilePath);
+    
     
     HMODULE hInstance = GetModuleHandle(0);
     WNDCLASS WndClass = {0};
@@ -371,14 +415,15 @@ int main(int NumArgs, char** Args)
     RegisterClass(&WndClass);
     
     g_Window = CreateWindow(WndClass.lpszClassName,
-                            "EXRViewer",
+                            "EXRViewer (Press space to save image to save.bmp",
                             WS_OVERLAPPEDWINDOW | WS_VISIBLE, 
                             0, 0, 400, 400,
                             0, 0, hInstance, 0);
     HDC WindowDC = GetDC(g_Window);
     InitOpenGL(WindowDC);
     
-    g_Texture = CreateTexture(Image);
+    g_Image = ParseEXR(FilePath);
+    g_Texture = CreateTexture(g_Image);
     
     g_Running = true;
     MSG Message = {0};

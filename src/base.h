@@ -34,10 +34,6 @@ struct str
     u32   Size;
 };
 
-struct color_f32
-{
-    f32 r, g, b;
-};
 
 #pragma pack(push, 1)
 struct bmp_file
@@ -48,7 +44,7 @@ struct bmp_file
     u32  DataOffset;
     u32  HeaderSize;
     s32  Width;
-    s32  Heigth;
+    s32  Height;
     u16  Planes;
     u16  BitsPerPixel;
     u32  Compression;
@@ -59,7 +55,7 @@ struct bmp_file
 
 struct bmp_color
 {
-    u8 r, g, b;
+    u8 b, g, r;
 };
 #pragma pack(pop)
 
