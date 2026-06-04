@@ -1,0 +1,57 @@
+version(1);
+
+project_name = "EXRViewer";
+
+patterns =
+{
+    "*.cpp",
+    "*.h",
+    "*.bat",
+    "*.4coder"
+};
+
+load_paths ={
+    {{
+            {"."}
+        }, .os = "win"},
+    
+};
+
+blacklist_patterns =
+{
+    ".*"
+};
+
+
+command_list =
+{
+    {	  .name = "build",
+	    .out = "*compilation*",
+		.footer_panel = true,
+	    .save_dirty_files = true,
+        .cursor_at_end = false,
+        .cmd = {{ "build.bat", .os = "win" },},
+        
+    },
+    {	  .name = "debug",
+	    .out = "",
+		.footer_panel = false,
+	    .save_dirty_files = false,
+        .cursor_at_end = false,
+        .cmd = {{ "debug.bat", .os = "win" },},
+        
+    },
+    {	  .name = "play",
+	    .out = "*compilation*",
+		.footer_panel = true,
+	    .save_dirty_files = false,
+        .cursor_at_end = false,
+        .cmd = {{ "play.bat", .os = "win" },},
+        
+    },
+    
+};
+
+fkey_command[1] = "build";
+fkey_command[2] = "debug";
+fkey_command[3] = "play";
