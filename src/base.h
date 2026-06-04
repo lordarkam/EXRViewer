@@ -9,10 +9,6 @@
 #define internal static
 #define global static
 
-#define Min(x, y) ((x) <= (y)) ? x : y
-#define Max(x, y) ((x) >= (y)) ? x : y
-#define Clamp(min, max, value) Min(Max((min), (value)), (max))
-
 typedef int8_t s8;
 typedef uint8_t u8;
 typedef uint8_t b8;
@@ -27,52 +23,5 @@ typedef uint64_t u64;
 typedef uint64_t b64;
 typedef float f32;
 typedef double f64;
-
-struct str
-{
-    char* String;
-    u32   Size;
-};
-
-
-#pragma pack(push, 1)
-struct bmp_file
-{
-    char ID[2];
-    u32  FileSize;
-    u32  Unused1;
-    u32  DataOffset;
-    u32  HeaderSize;
-    s32  Width;
-    s32  Height;
-    u16  Planes;
-    u16  BitsPerPixel;
-    u32  Compression;
-    u32  DataSize;
-    u32  Unused[4];
-    u8*  Data;
-};
-
-struct bmp_color
-{
-    u8 b, g, r;
-};
-#pragma pack(pop)
-
-struct image
-{
-    s32 Width;
-    s32 Height;
-    u32 Channels;
-    u8* Data;
-};
-
-struct vec2
-{
-    f32 x,y;
-};
-
-#define ReadU32(Current) (Current += sizeof(u32), *(u32*)(Current - sizeof(u32)))
-#define ReadS32(Current) (Current += sizeof(s32), *(s32*)(Current - sizeof(s32)))
 
 #endif //BASE_H
