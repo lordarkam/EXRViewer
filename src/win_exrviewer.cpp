@@ -3,11 +3,12 @@
 #include <math.h>
 #include <gl/gl.h>
 #include "base.h"
-#include "exr_parser.cpp"
+
+#define EXR_LOADER_IMPLEMENTATION
+#include "exr_parser.h"
 
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "gdi32.lib")
-
 
 #define SAVE_PATH "save.bmp"
 
@@ -15,11 +16,72 @@ global u32 g_Running;
 global HWND g_Window;
 global vec2 g_WindowSize;
 
-global image g_Image;
+global exr_image g_Image;
 global u32 g_Texture;
 
+
+internal void
+SaveBMP(exr_image* Image, char* FilePath)
+{
+    if(Image->Type == IMAGE_DATA_BGR8)
+    {
+        
+        FILE* File = fopen(FilePath, "wb");
+        if(!File)
+        {
+            printf("Error creating file %s\n", FilePath);
+            return;
+        }
+        
+        bmp_file BmpHeader = {0};
+        u32 DataSize = Image->Width * Image->Height * Image->Channels;
+        u32 FileSize = offsetof(BmpHeader, Data) + DataSize;
+        
+        BmpHeader.ID[0]        = 'B';
+        BmpHeader.ID[1]        = 'M';
+        BmpHeader.FileSize     = FileSize;
+        BmpHeader.DataOffset   = offsetof(BmpHeader, Data);
+        BmpHeader.HeaderSize   = offsetof(BmpHeader, Data) - offsetof(BmpHeader, HeaderSize);
+        BmpHeader.Width        = Image->Width;
+        BmpHeader.Height       = -Image->Height;
+        BmpHeader.Planes       = 1;
+        BmpHeader.BitsPerPixel = Image->Channels * 8;
+        BmpHeader.DataSize     = DataSize;
+        
+        fwrite(&BmpHeader, 1, offsetof(BmpHeader, Data), File);
+        fwrite(Image->Data, 1, BmpHeader.DataSize, File);
+        fclose(File);
+    }
+    else
+    {
+        printf("Image format is not compatible with BMP file format\n");
+    }
+}
+
+
+internal str
+ReadFullFile(char* FilePath)
+{
+    str Result = {0};
+    
+    FILE* File = fopen(FilePath, "rb");
+    if(!File)
+    {
+        printf("Error opening file: %s\n", FilePath);
+        return Result;
+    }
+    fseek(File, 0, SEEK_END);
+    Result.Size = ftell(File);
+    fseek(File, 0, SEEK_SET);
+    Result.String = (char*)malloc(Result.Size);
+    fread(Result.String, 1, Result.Size, File);
+    fclose(File);
+    return Result;
+}
+
+
 internal u32
-CreateTexture(image Image)
+CreateTexture(exr_image Image)
 {
     u32 Result = {0};
     
@@ -82,6 +144,24 @@ InitOpenGL(HDC WindowDC)
     wglMakeCurrent(WindowDC, Context);
 }
 
+internal exr_image
+LoadEXR(char* FilePath)
+{
+    exr_image Result = {0};
+    
+    str FileData = ReadFullFile(FilePath);
+    if(FileData.Size == 0)
+    {
+        printf("Error: file .exr is not present %s\n", FilePath);
+        return Result;
+    }
+    Result = EXRLoad(FileData.String, IMAGE_DATA_BGR8, 0);
+    char* ImageBuffer = (char*)malloc(Result.DataSize);
+    Result = EXRLoad(FileData.String, IMAGE_DATA_BGR8, ImageBuffer, 5);
+    free(FileData.String);
+    return Result;
+}
+
 LRESULT
 WndProc(HWND Window, UINT Message, WPARAM wParam, LPARAM lParam)
 {
@@ -142,8 +222,6 @@ int main(int NumArgs, char** Args)
     char* FilePath = Args[1];
     printf("EXR file to view: %s\n", FilePath);
     
-    
-    
     HMODULE hInstance = GetModuleHandle(0);
     WNDCLASS WndClass = {0};
     WndClass.hInstance = hInstance;
@@ -160,8 +238,9 @@ int main(int NumArgs, char** Args)
     HDC WindowDC = GetDC(g_Window);
     InitOpenGL(WindowDC);
     
-    g_Image = ParseEXR(FilePath, IMAGE_DATA_BGR8, 5);
+    g_Image = LoadEXR(FilePath);
     g_Texture = CreateTexture(g_Image);
+    free(g_Image.Data);
     
     g_Running = true;
     MSG Message = {0};

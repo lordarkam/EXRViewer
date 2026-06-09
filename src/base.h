@@ -24,4 +24,40 @@ typedef uint64_t b64;
 typedef float f32;
 typedef double f64;
 
+struct vec2
+{
+    f32 x,y;
+};
+
+struct str
+{
+    char* String;
+    u32   Size;
+};
+
+
+#pragma pack(push, 1)
+struct bmp_file
+{
+    char ID[2];
+    u32  FileSize;
+    u32  Unused1;
+    u32  DataOffset;
+    u32  HeaderSize;
+    s32  Width;
+    s32  Height;
+    u16  Planes;
+    u16  BitsPerPixel;
+    u32  Compression;
+    u32  DataSize;
+    u32  Unused[4];
+    u8*  Data;
+};
+
+struct bmp_color
+{
+    u8 b,g,r;
+};
+#pragma pack(pop)
+
 #endif //BASE_H
