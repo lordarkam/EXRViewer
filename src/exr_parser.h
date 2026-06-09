@@ -51,6 +51,10 @@ struct exr_color_f32
 {
     f32 r,g,b;
 };
+struct exr_bmp_color
+{
+    u8 r,g,b;
+};
 
 enum exr_image_data_type
 {
@@ -128,10 +132,10 @@ EXRApplyTonemap(exr_color_f32 Color)
     return Color;
 }
 
-internal bmp_color
+internal exr_bmp_color
 EXRBMPColorFromColorF32(exr_color_f32 Color, f32 Exposure)
 {
-    bmp_color Result;
+    exr_bmp_color Result;
     
     // Exposure
     exr_color_f32 ExposuredColor = EXRApplyExposure(Color, Exposure);
@@ -280,7 +284,7 @@ EXRLoad(char* FileBuffer, exr_image_data_type ImageType, char* ImageBuffer, f32 
             }
         }
         
-        u32 ImageElementSize = ImageType == IMAGE_DATA_BGR8 ? sizeof(bmp_color) : sizeof(exr_color_f32);
+        u32 ImageElementSize = ImageType == IMAGE_DATA_BGR8 ? sizeof(exr_bmp_color) : sizeof(exr_color_f32);
         
         Result.Width    = Width;
         Result.Height   = Height;
@@ -304,7 +308,7 @@ EXRLoad(char* FileBuffer, exr_image_data_type ImageType, char* ImageBuffer, f32 
         Current += sizeof(u64) * Height;
         
         // Buffer to contain the interleaved data
-        u32 ImageElementSize = ImageType == IMAGE_DATA_BGR8 ? sizeof(bmp_color) : sizeof(exr_color_f32);
+        u32 ImageElementSize = ImageType == IMAGE_DATA_BGR8 ? sizeof(exr_bmp_color) : sizeof(exr_color_f32);
         
         u8* CurrentImageBuffer = (u8*)ImageBuffer;
         
@@ -327,7 +331,7 @@ EXRLoad(char* FileBuffer, exr_image_data_type ImageType, char* ImageBuffer, f32 
             {
                 if(ImageType == IMAGE_DATA_BGR8)
                 {
-                    *((bmp_color*)CurrentImageBuffer) = EXRBMPColorFromColorF32({EXRFloatFromHalf(R[j]), EXRFloatFromHalf(G[j]), EXRFloatFromHalf(B[j])}, Exposure) ;
+                    *((exr_bmp_color*)CurrentImageBuffer) = EXRBMPColorFromColorF32({EXRFloatFromHalf(R[j]), EXRFloatFromHalf(G[j]), EXRFloatFromHalf(B[j])}, Exposure) ;
                 }
                 else
                 {
